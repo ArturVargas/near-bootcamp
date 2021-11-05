@@ -1,6 +1,6 @@
 import { Context, logging, storage, PersistentMap, u128 } from 'near-sdk-as'
 
-const approves = new PersistentMap<string, u64>("approve:");
+const approves = new PersistentMap<string, u128>("approve:");
 const balanceRegistry = new PersistentMap<string, u128>("balance:");
 const totalSupply = new PersistentMap<string, u128>("totalSupply:");
 const OPERATION_ERR = 'Error en la Operacion';
@@ -44,8 +44,15 @@ export function getBalance(owner: string): u128 {
   return balanceRegistry.getSome(owner);
 }
 
+export function allowance(owner: string, spender: string): u128 {
+  const key = owner + ":" + spender;
+  if(approves.contains(key)) {
+    return approves.getSome(key);
+  }
+  return u128.Zero;
+}
 // Context.sender es la cuenta que envia la tx
-export function approve(spender: string, amount: u64): boolean {
+export function approve(spender: string, amount: u128): boolean {
   logging.log("approve: " + spender + ", amount: " + amount.toString());
   approves.set(Context.sender + ": " + spender, amount);
   return true;
@@ -58,5 +65,25 @@ export function transfer(to: string, amount: u128): boolean {
   assert(getBalance(to) <= getBalance(to) + amount, "Error");
   balanceRegistry.set(Context.sender, fromAmount - amount);
   balanceRegistry.set(to, getBalance(to) + amount);
+  return true;
+}
+
+export function transferFrom(from: string, to: string, amount: u128): boolean {
+  const fromAmount = getBalance(from);
+  assert(fromAmount >= amount, "Saldo insuficiente");
+  const approvedAmount = allowance(from, to);
+  assert(approvedAmount >= amount, "Monto enviado menor al aprobado");
+  assert(getBalance(to) <= getBalance(to) + amount, "Error");
+  balanceRegistry.set(from, fromAmount - amount);
+  balanceRegistry.set(to, getBalance(to) + amount);
+  return true;
+}
+
+export function mint(tokens: u128): boolean {
+  assert(storage.getSome("owner"), OPERATION_ERR)
+  let currentSupply = totalSupply.getSome("totalSupply");
+  totalSupply.set("totalSupply", u128.add(currentSupply, tokens));
+  let currentBalance = getBalance(Context.predecessor);
+  balanceRegistry.set(Context.predecessor, u128.add(currentBalance, tokens));
   return true;
 }
