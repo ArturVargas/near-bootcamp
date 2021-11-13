@@ -62,9 +62,9 @@ export function transfer(to: string, amount: u128): boolean {
   logging.log("transferFrom: " + Context.sender + " to: " + to + " amount: " + amount.toString());
   const fromAmount = getBalance(Context.sender);
   assert(fromAmount >= amount, "No tienes suficientes tokens en tu cuenta");
-  assert(getBalance(to) <= getBalance(to) + amount, "Error");
-  balanceRegistry.set(Context.sender, fromAmount - amount);
-  balanceRegistry.set(to, getBalance(to) + amount);
+  assert(getBalance(to) <= u128.add(getBalance(to), amount), "Error");
+  balanceRegistry.set(Context.sender, u128.sub(fromAmount, amount));
+  balanceRegistry.set(to, u128.add(getBalance(to), amount));
   return true;
 }
 
@@ -73,9 +73,9 @@ export function transferFrom(from: string, to: string, amount: u128): boolean {
   assert(fromAmount >= amount, "Saldo insuficiente");
   const approvedAmount = allowance(from, to);
   assert(approvedAmount >= amount, "Monto enviado menor al aprobado");
-  assert(getBalance(to) <= getBalance(to) + amount, "Error");
-  balanceRegistry.set(from, fromAmount - amount);
-  balanceRegistry.set(to, getBalance(to) + amount);
+  assert(getBalance(to) <= u128.add(getBalance(to), amount), "Error");
+  balanceRegistry.set(from, u128.sub(fromAmount, amount));
+  balanceRegistry.set(to, u128.add(getBalance(to), amount));
   return true;
 }
 
